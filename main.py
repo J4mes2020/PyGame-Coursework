@@ -1,21 +1,23 @@
 import random
 import sys
 import runpy
-import time
-
+import re
 import pygame
 
 #Setting values for the game to use
 
 playerTouch = False
+inputActive = False
 AITouch = False
 counter = 0
 player_x = 0
 player_y = 0
-player_score = 0
+playerScore = 0
 ai_score = 0
 mainMenuActive = True
 optionsOpen = False
+name = "name"
+fileWrite = open("playerScores.txt", "at")
 
 
 def playerHitbox(): # Defining the function for the player collisions
@@ -53,14 +55,21 @@ def aiHitbox(): #Function defined to detect if the AI hits something
 
 
 def aiMovement():
+    global chanceOfNotAccurateLeft, chanceOfNotAccurateRight
 
     if not AITouch:
 
-        if aiPlayer.left <= leftObstacle.right:
-            aiPlayer.left += 7
+        chanceOfFail = random.randint(0, int(playerScore * 1.3))
 
-        if aiPlayer.right >= rightObstacle.left:
-            aiPlayer.right -= 7
+        if chanceOfFail >= 100 or random.random() * 100 == chanceOfFail:
+            if aiPlayer.right >= leftObstacle.right - 50:
+                aiPlayer.left -= 7
+
+        if aiPlayer.right >= rightObstacle.left - random.randint(0, int (gap / 2 - aiPlayer.width)):
+            aiPlayer.left -= 7
+
+        if aiPlayer.left <= leftObstacle.right + random.randint(0, int (gap / 2 - aiPlayer.width)):
+            aiPlayer.right += 7
 
 
 def runGame(): # The main function used to run the game which includes the player movement and events
@@ -101,7 +110,7 @@ def runGame(): # The main function used to run the game which includes the playe
         screen.blit(aiImage, aiPlayer)
         renderTextUnderPlayer(player, aiPlayer)
 
-        p_text = score_font.render("Player Score: " + str(player_score), False, Score)
+        p_text = score_font.render("Player Score: " + str(playerScore), False, Score)
         screen.blit(p_text, (15, 15))
 
         a_text = score_font.render("AI Score: " + str(ai_score), False, Score)
@@ -114,12 +123,12 @@ def runGame(): # The main function used to run the game which includes the playe
 
 
 def mainMenu(): # This function is used to display the main menu and which loads the game
-    global mainMenuActive
-    global optionsOpen, ai_score, AITouch, playerTouch, player_score
+    global mainMenuActive, inputActive, name
+    global optionsOpen, ai_score, AITouch, playerTouch, playerScore
 
     buttonOutline = pygame.image.load("assets/buttonOutline.png").convert()
     buttonOutlineHover = pygame.image.load("assets/buttonOutlineHover.png").convert()
-    myName = buttonFont.render("© OdionWolf", True, darkBlurple)
+    myName = buttonFont.render("© Odion", True, darkBlurple)
     myName.set_alpha(30)
 
     miscFont = pygame.font.Font('assets/ansley-black.ttf', 10)
@@ -129,10 +138,14 @@ def mainMenu(): # This function is used to display the main menu and which loads
     startGameFont = buttonFont.render("Start Game", True, blurple)
     optionsFont = buttonFont.render("Options", True, blurple)
     closeGameFont = buttonFont.render("Close Game", True, blurple)
+    nameBoxInput = buttonFont.render(name, True, darkBlurple)
+
+    gapOfScores = 90
 
     mousePos = pygame.mouse.get_pos()
 
     screen.blit(mainMenuBackground, [0, 0])
+    screen.blit(nameOutline, inputName)
     screen.blit(buttonOutline, startGame)
     screen.blit(buttonOutline, options)
     screen.blit(buttonOutline, closeGame)
@@ -141,21 +154,68 @@ def mainMenu(): # This function is used to display the main menu and which loads
     screen.blit(startGameFont, (startGame.width / 1.02, startGame.centery + startGameFont.get_height() - 29))
     screen.blit(optionsFont, (options.width / 0.95, options.centery + optionsFont.get_height() - 29))
     screen.blit(closeGameFont, (closeGame.width / 1.02, closeGame.centery + closeGameFont.get_height() - 29))
+    screen.blit(playerScoreOverlay, playerScoreList)
+
+    if name == "name":
+        nameBoxInput.set_alpha(70)
+
+
+    fileRead = open("playerScores.txt", "r")
+
+    lineArray = [line.rstrip() for line in fileRead.readlines()]
+    lineArray.reverse()
+
+    for iterator in range(len(lineArray)):
+        if iterator <= 10:
+            playerScores = buttonFont.render(lineArray[iterator], True, blurple)
+
+            screen.blit(playerScores, (width - 240, gapOfScores))
+            gapOfScores += 35
 
     if mainMenuActive:
+
+        if inputName.collidepoint(mousePos):
+            if pygame.mouse.get_pressed()[0]:
+                inputActive = True
+                if name == "name":
+                    name= ""
+
+        if not inputName.collidepoint(mousePos):
+            if pygame.mouse.get_pressed()[0]:
+                inputActive = False
+
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and inputActive:
+                if event.key == pygame.K_BACKSPACE:
+                    name = name[:-1]
+                else:
+                    name += event.unicode
+
+        if inputActive:
+            screen.blit(nameOutlineHover, inputName)
+
+        else:
+            screen.blit(nameOutline, inputName)
+
+
+        screen.blit(nameBoxInput, (width / 2 - nameBoxInput.get_width() /2 , (inputName.height / 2 + nameBoxInput.get_height() / 2) + 37))
+
+
         if startGame.collidepoint(mousePos):
             screen.blit(buttonOutlineHover, startGame)
             screen.blit(startGameFont, (startGame.width / 1.02, startGame.centery + startGameFont.get_height() - 29))
 
             if pygame.mouse.get_pressed()[0]:
-                mainMenuActive = False
-                pygame.mixer.music.pause()
-                pygame.mixer.Sound.play(start_game_sound)
-                pygame.mixer.Sound.set_volume(start_game_sound, 0.05)
-                pygame.mixer.music.play(1)
-                pygame.mixer.music.set_volume(0.1)
-                pygame.mixer.music.load("music/active-game.wav")
-                pygame.mixer.music.play(-1)
+                if name != "" and name != "name":
+                    mainMenuActive = False
+                    pygame.mixer.music.pause()
+                    pygame.mixer.Sound.play(start_game_sound)
+                    pygame.mixer.Sound.set_volume(start_game_sound, 0.05)
+                    pygame.mixer.music.play(1)
+                    pygame.mixer.music.set_volume(0.1)
+                    pygame.mixer.music.load("music/active-game.wav")
+                    pygame.mixer.music.play(-1)
+
 
         if options.collidepoint(mousePos):
 
@@ -177,11 +237,6 @@ def mainMenu(): # This function is used to display the main menu and which loads
 
 def renderTextUnderPlayer(Player, AIPlayer):
 
-    playerFonts = pygame.font.Font('assets/ansley-black.ttf', 12)
-    playerText = playerFonts.render("Player", True, darkBlurple)
-    aiText = playerFonts.render("AI", True, darkBlurple)
-    aiText.set_alpha(50)
-
     screen.blit(playerText, ((Player.x + playerText.get_width() /4) - 16 , Player.centery + 40))
     screen.blit(aiText, ((AIPlayer.x + playerText.get_width() /2) - 8 , AIPlayer.centery + 40))
 
@@ -200,6 +255,7 @@ def deathMenu(): # If the player dies then this function will overlay a menu say
 
         backtoMainMenuFont = buttonFont.render("Main Menu", True, blurple)
         gameOver = deadFont.render("GAME OVER", True, blurple)
+        scoreGameOver = scoreDeadFont.render("Score: " + str(playerScore), True, blurple)
 
         mousePos = pygame.mouse.get_pos()
 
@@ -208,12 +264,19 @@ def deathMenu(): # If the player dies then this function will overlay a menu say
         deathMenuScreen.blit(buttonOutline, backToMainMenuButton)
         deathMenuScreen.blit(gameOver, (
             screen.get_width() / 2 - backtoMainMenuFont.get_width() / 2 - 270,
-            backtoMainMenuFont.get_height() / 2 + 100))
+            backtoMainMenuFont.get_height() / 2 + 50))
+
+        deathMenuScreen.blit(scoreGameOver, (
+            screen.get_width() / 2 - scoreGameOver.get_width() / 2 ,
+            screen.get_height() / 2 - 30))
 
         if backToMainMenuButton.collidepoint(mousePos):
             if pygame.mouse.get_pressed()[0]:
+                fileWrite.write(name + ": " + str(playerScore) + "\n")
+                fileWrite.close()
                 runpy.run_path('main.py')
                 sys.exit()
+
 
         deathMenuScreen.blit(backtoMainMenuFont, (
             backToMainMenuButton.width, backToMainMenuButton.centery + backtoMainMenuFont.get_height() - 30))
@@ -260,34 +323,46 @@ def optionsMenu(): # Creates the options menu
     screen.blit(credit, (screen.get_width() / 3.2, height - 130))
     screen.blit(returnFont, (screen.get_width() / 2.5, height - 70))
 
+def developDifficulty():
+    global rightObstacle, leftObstacle, obstacleSpeed, maxGapThreshold, minGap, obstacleSpeed
+
+    maxGap = width - maxGapThreshold  # The smaller the number the smaller the gap
+    gap = random.uniform(minGap, maxGap)
+    randomLength = random.uniform(0, width - random.uniform(minGap, maxGap))
+
+    if playerScore % 5 == 0:
+
+        if minGap < 100:
+            minGap = 100
+
+        maxGapThreshold = maxGapThreshold + 50
+        minGap = minGap / 1.2
+        obstacleSpeed = obstacleSpeed + 0.2
+
+
+    leftObstacle = pygame.Rect(0, 0, randomLength, 100)
+    rightObstacle = pygame.Rect(leftObstacle.right + gap, 0, width, 100)
+
 
 def reset(): #Resets the obstacles and randomises their spawn
-    global player_score, leftObstacle, rightObstacle, ai_score
 
+    global playerScore, ai_score, chanceOfNotAccurateLeft, chanceOfNotAccurateRight
     if leftObstacle.top >= height:
 
-        if player_score < 3:
-
-            minGap = player.width * 3
-            maxGap = width - minGap
-            randomLength = random.uniform(0, width - maxGap)
-            gap = random.uniform(minGap, maxGap)
-
-            leftObstacle = pygame.Rect(0, 0, randomLength, 100)
-            rightObstacle = pygame.Rect(leftObstacle.right + gap, 0, width, 100)
-
-            print(gap)
+        developDifficulty()
 
         leftObstacle.top = 0
         rightObstacle.top = 0
 
+        chanceOfNotAccurateLeft = random.randint(0, int(leftObstacle.width / 2))
+        chanceOfNotAccurateRight = random.randint(0, int(rightObstacle.width / 2))
+
         if not playerTouch:
-            player_score += 1
+            playerScore += 1
 
         if not AITouch:
             ai_score += 1
 
-        #pygame.time.wait(300)
 
 
 def deadCheck(player): # Checks if the player is dead and handles if they are
@@ -310,9 +385,8 @@ def deadCheck(player): # Checks if the player is dead and handles if they are
         rightObstacle.move_ip(0, obstacleSpeed)
 
     if AITouch:
-        if aiPlayer.width >= 0:
-            aiPlayer.width -= 1
-            aiPlayer.height -= 1
+        aiImage.set_alpha(aiImage.get_alpha() - 1)
+        aiText.set_alpha(aiText.get_alpha() - 1)
 
 
 def moveObstacle(cloud1, cloud3, cloud4, cloud5, cloud6, cloud7, cloud8): # Responsible for overlaying the images
@@ -380,21 +454,34 @@ width = 960
 height = 540
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption('Avoid Clouds!')
+pygame.display.set_icon(pygame.image.load("assets/icon/icon.png"))
+
 background = pygame.image.load("assets/bg.png").convert()
 mainMenuBackground = pygame.image.load("assets/mainmenubg.png").convert()
 
 # Game Rectangles pygame.rect(x,y,width,height)
+
 player = pygame.Rect(width / 2 - 35, height - 105, 70, 70)
-maxGapSize = 400
-minGapSize = player.width
 aiPlayer = pygame.Rect(width / 2, height - 105, 70, 70)
-randomLength = random.uniform(0, width - maxGapSize)
-gapBetweenObjects = random.uniform(minGapSize, maxGapSize)
-leftObstacle = pygame.Rect(0, 0, randomLength, 100)
-rightObstacle = pygame.Rect(randomLength + gapBetweenObjects, 0, width, 100)
 playerImage = pygame.image.load("assets/player.png").convert()
 aiImage = pygame.image.load("assets/aiplayer.png").convert()
 aiImage.set_alpha(50)
+
+playerFonts = pygame.font.Font('assets/ansley-black.ttf', 12)
+playerText = playerFonts.render("Player", True, darkBlurple)
+aiText = playerFonts.render("AI", True, darkBlurple)
+aiText.set_alpha(50)
+
+
+maxGapThreshold = 400  # The larger the number the harder itll be
+minGap = player.width * 3  # The smaller the number the harder itll be
+maxGap = width - maxGapThreshold  # The smaller the number the smaller the gap
+gap = random.uniform(minGap, maxGap)
+randomLength = random.uniform(0, width - random.uniform(minGap, maxGap))
+
+leftObstacle = pygame.Rect(0, 0, randomLength, 100)
+rightObstacle = pygame.Rect(leftObstacle.right + gap, 0, width, 100)
+
 cloud1 = pygame.image.load("assets/clouds/cloud1.png").convert()
 cloud3 = pygame.image.load("assets/clouds/cloud3.png").convert()
 cloud4 = pygame.image.load("assets/clouds/cloud4.png").convert()
@@ -403,13 +490,26 @@ cloud6 = pygame.image.load("assets/clouds/cloud6.png").convert()
 cloud7 = pygame.image.load("assets/clouds/cloud7.png").convert()
 cloud8 = pygame.image.load("assets/clouds/cloud8.png").convert()
 score_font = pygame.font.Font('freesansbold.ttf', 20)
+
 startGame = pygame.Rect(width / 2 - 200, height / 2.4 - 100, 400, 85)
 options = pygame.Rect(width / 2 - 200, height / 2.4, 400, 85)
 closeGame = pygame.Rect(width / 2 - 200, height / 2.4 + 100, 400, 85)
 backToMainMenuButton = pygame.Rect(width / 2 - 200, height / 2.4 + 170, 400, 85)
+
+
+inputName = pygame.Rect(width / 2 - 100, height / 2.4 - 170, 200, 42.5)
+nameOutline = pygame.image.load("assets/nameOutline.png").convert()
+nameOutlineHover = pygame.image.load("assets/nameOutlineHover.png").convert()
+
+playerScoreList = pygame.Rect(width - 250, 72.5, 220, 405)
+playerScoreOverlay = pygame.image.load("assets/playerScoreOutline.png").convert()
+
+
 buttonOutline = pygame.image.load("assets/buttonOutline.png").convert()
 buttonFont = pygame.font.Font('assets/ansley-black.ttf', 20)
 deadFont = pygame.font.Font('assets/ansley-black.ttf', 80)
+scoreDeadFont = pygame.font.Font('assets/ansley-black.ttf', 40)
+
 
 # Music
 start_game_sound = pygame.mixer.Sound("music/start-game.wav")
