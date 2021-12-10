@@ -110,11 +110,11 @@ def runGame(): # The main function used to run the game which includes the playe
         screen.blit(aiImage, aiPlayer)
         renderTextUnderPlayer(player, aiPlayer)
 
-        p_text = score_font.render("Player Score: " + str(playerScore), False, Score)
-        screen.blit(p_text, (15, 15))
+        p_text = score_fontPlayer.render(str(playerScore), False, burpleBlack)
+        screen.blit(p_text, (width / 2 - p_text.get_width() / 2, 30))
 
-        a_text = score_font.render("AI Score: " + str(ai_score), False, Score)
-        screen.blit(a_text, (width - 130, 15))
+        a_text = score_font.render(str(ai_score), False, darkBlurple)
+        screen.blit(a_text, (width / 2 - a_text.get_width() / 2 , 90))
 
 
         # Once reset this function will move the images to make sure the collisions line up
@@ -185,7 +185,7 @@ def mainMenu(): # This function is used to display the main menu and which loads
                 inputActive = False
 
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and inputActive:
+            if event.type == pygame.KEYDOWN or event.type == pygame.KEYUP and inputActive:
                 if event.key == pygame.K_BACKSPACE:
                     name = name[:-1]
                 else:
@@ -489,7 +489,8 @@ cloud5 = pygame.image.load("assets/clouds/cloud5.png").convert()
 cloud6 = pygame.image.load("assets/clouds/cloud6.png").convert()
 cloud7 = pygame.image.load("assets/clouds/cloud7.png").convert()
 cloud8 = pygame.image.load("assets/clouds/cloud8.png").convert()
-score_font = pygame.font.Font('freesansbold.ttf', 20)
+score_fontPlayer = pygame.font.Font('freesansbold.ttf', 60)
+score_font = pygame.font.Font('freesansbold.ttf', 25)
 
 startGame = pygame.Rect(width / 2 - 200, height / 2.4 - 100, 400, 85)
 options = pygame.Rect(width / 2 - 200, height / 2.4, 400, 85)
